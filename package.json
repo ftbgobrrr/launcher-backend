@@ -2,8 +2,7 @@
 	"name": "backend-api",
 	"version": "1.0.0",
 	"scripts": {
-		"start": "babel-node src",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"start": "babel-node src"
 	},
 	"dependencies": {
 		"@phc/argon2": "^1.0.9",
