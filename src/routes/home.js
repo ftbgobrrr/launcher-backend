@@ -31,7 +31,7 @@ router.get('/manifest', async (req, res) => {
         const files = await req.db
             .collection('launcher')
             .find({})
-            .map(({ _id, ...fields }) => ({ ...fields }))
+            .map(({ _id, url, ...fields }) => ({ ...fields, url: HOST + url }))
             .toArray()
             .map((file) => {
                 file.url = HOST + file.url
