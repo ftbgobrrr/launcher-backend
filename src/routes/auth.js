@@ -19,7 +19,9 @@ router.post('/login', async (req, res, next) => {
         .find({ login })
         .map(({ _id, ...fields }) => ({ id: _id, ...fields }))
         .next();
-    if (!result || !await upash.verify(result.pass, pass)) { return next(); }
+    if (!result || !await upash.verify(result.pass, pass)) { 
+        return next(); 
+    }
     delete result.pass;
     const token = res.jwt({
         id: result.id,

@@ -1,0 +1,20 @@
+version: "3.7"
+services:
+  api:
+    build: .
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://db:27017/launcher
+      - HOST=http://localhost:3000
+    ports:
+      - 3000:3000
+    volumes:
+      - ./src:/app/src
+  db:
+    image: mongo:latest
+    restart: always
+    ports:
+      - 127.0.0.1:27017:27017
+    volumes:
+      - ./volumes/db:/data/db

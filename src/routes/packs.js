@@ -5,7 +5,6 @@ import {
     mojang, appRoot, HOST, PORT,
 } from '..';
 import fse from 'fs-extra';
-import fs from 'fs';
 import { promisify } from 'util';
 import sha1FileCallback from 'sha1-file';
 import nodepath from 'path';
@@ -13,6 +12,9 @@ import deleteEmpty from 'delete-empty';
 import clone from 'clone';
 import { groupToLevel, EDITOR, path as nameToPath } from '../utils';
 import { error, INVALID_RESULT, INCOMPATIBLE_VERSION } from '../errors';
+import {
+    buildPack
+} from '../utils';
 
 const sha1File = promisify(sha1FileCallback);
 const router = express.Router();
@@ -55,7 +57,7 @@ router.post('/add', jwt.require('level', '>=', groupToLevel(EDITOR)), async (req
     const { data: version } = await mojang.version(preset, true);
     console.log(version);
     req.db.collection('packs')
-        .insertOne({ name, preset, files: [], libraries: [], desabled: [] })
+        .insertOne({ name, preset, files: [], libraries: [], disabled: [] })
         .then(({ insertedId }) => {
             res.status(200).json({ id: insertedId, name, preset });
         });
@@ -123,7 +125,7 @@ router.post('/pack/upload', jwt.require('level', '>=', groupToLevel(EDITOR)), as
         const out = nodepath.normalize(`${appRoot}/public/${plurializedType}/${path}`);
         await fse.createFile(out);
         await file.mv(out);
-        const url = `${HOST}/public/${plurializedType}/${nodepath.normalize(path).replace(/^\/|\/$/g, '')}`;
+        const url = `/public/${plurializedType}/${nodepath.normalize(path).replace(/^\/|\/$/g, '')}`.replaceAll(' ', '%20');
         const { size } = await fse.stat(out);
         const sha1 = await sha1File(out);
 
@@ -146,6 +148,7 @@ router.post('/pack/upload', jwt.require('level', '>=', groupToLevel(EDITOR)), as
         const { isOk } = await bulk.execute();
         if (!isOk) return next();
         res.json(lib);
+        
     } catch (err) {
         console.log(err)
         return next();
@@ -168,64 +171,42 @@ router.post('/pack/del', jwt.require('level', '>=', groupToLevel(EDITOR)), async
 }, ({ res }) => error(res, INVALID_RESULT));
 
 router.post('/pack/settings', jwt.require('level', '>=', groupToLevel(EDITOR)), async (req, res, next) => {
-    const { id: pack, mainClass, args } = req.body;
+    const { id: pack, mainClass, args, jvmArgs } = req.body;
     const { modifiedCount, matchedCount } = await req.db.collection('packs')
         .updateOne(
             { _id: new ObjectId(pack) },
-            { $set: { mainClass, args } }
+            { $set: { mainClass, args, jvmArgs } }
         );
     if (matchedCount !== 1 && modifiedCount === 0) return next();
     res.status(200).json({ id: pack, mainClass, args });
 }, ({ res }) => error(res, INVALID_RESULT));
 
-router.post('/pack/desable', jwt.require('level', '>=', groupToLevel(EDITOR)), async (req, res, next) => {
-    const { id: pack, type, name, desable } = req.body;
+router.post('/pack/disable', jwt.require('level', '>=', groupToLevel(EDITOR)), async (req, res, next) => {
+    const { id: pack, type, name, disable } = req.body;
     const bulk = req.db.collection('packs').initializeOrderedBulkOp();
-    bulk.find({ _id: new ObjectId(pack) }).updateOne({ $pull: { desabled: { type, name } } });
-    if (desable == true)
-        bulk.find({ _id: new ObjectId(pack) }).updateOne({ $push: { desabled: { type, name } } });
+    bulk.find({ _id: new ObjectId(pack) }).updateOne({ $pull: { disabled: { type, name } } });
+    if (disable == true)
+        bulk.find({ _id: new ObjectId(pack) }).updateOne({ $push: { disabled: { type, name } } });
     const { isOk } = await bulk.execute();
     if (!isOk) return next();
-    res.status(200).json({ id: pack, name, type, desable });
+    res.status(200).json({ id: pack, name, type, disable });
 }, ({ res }) => error(res, INVALID_RESULT));
+
+
+
 
 
 router.post('/pack/build', jwt.require('level', '>=', groupToLevel(EDITOR)), async (req, res, next) => {
     const { id } = req.body;
     try {
-        const packs = await req.db
-            .collection('packs')
-            .find({})
-            .map(({ _id, ...fields }) => ({ id: _id, ...fields }))
-            .toArray();
-            res.status(200);
-        const pack = packs.find(({ id: i }) => i == id)
-        const { data } = await mojang.version(pack.preset);
-        const copy = clone(data);
-        if (pack) {
-            copy.id = pack.name;
-            copy.libraries = pack.libraries && pack.libraries.filter(({ name }) => {
-                return pack.desabled && !pack.desabled.find(({ name: n, type }) => n == name && type == 'library')
-            }).concat(data.libraries);
-
-            copy.files = pack.files && pack.files.filter(({ name }) => {
-                return pack.desabled && !pack.desabled.find(({ name: n, type }) => n == name && type == 'file')
-            }) || undefined;
-
-            copy.mainClass = pack.mainClass || copy.mainClass;
-            if (pack.args) {
-                copy.arguments.game = [ ...data.arguments.game, ...pack.args.split(' ') ];
-            }
-        }
-        const version = `${appRoot}/public/versions/${pack.name.toLowerCase()}.json`;
-        await fse.createFile(version)
-        await fse.writeJson(version, copy);
-        await deleteEmpty(`${appRoot}/public/`);
+        await buildPack(req.db, id);
         res.json({ id });
     } catch (err) {
         console.log(err)
         error(res, INCOMPATIBLE_VERSION);
     }
 }, ({ res }) => error(res, INVALID_RESULT));
+
+
 
 module.exports = router;

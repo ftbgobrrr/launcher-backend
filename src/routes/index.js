@@ -8,16 +8,16 @@ const routes = [
         route: require('./packs'),
     },
     {
+        path: '/import',
+        route: require('./import'),
+    },
+    {
         path: '/news',
         route: require('./news')
     },
     {
         path: '/users',
         route: require('./users'),
-    },
-    {
-        path: '/packs',
-        route: require('./packs'),
     },
     {
         path: '/presets',

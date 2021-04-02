@@ -8,6 +8,7 @@ import cors from 'cors';
 import logger from 'morgan';
 import fileUpload from 'express-fileupload';
 import Mojang from './mojang';
+
 import { error, INVALID_TOKEN, INSUFFICIENT_PERMISSION } from './errors';
 import { addRoutes } from './routes';
 
@@ -21,7 +22,6 @@ const {
 } = process.env;
 
 app.use(logger('dev'));
-
 app.use(mongo(MONGO_URI));
 upash.install('argon2', require('@phc/argon2'));
 
@@ -33,8 +33,8 @@ app.use(cors({
 app.use(cookieParser());
 app.use(jwt.init(AUTH_SECRET, { cookie: 'auth' }));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(fileUpload());
+// app.use(bodyParser.urlencoded({ extended: true, limit: 500 * 1024 * 1024 }));
+app.use(fileUpload({ abortOnLimit: false, limitHandler: false, useTempFiles: true, tempFileDir : '/tmp/' }));
 app.use('/public', express.static(`${__dirname}/public`));
 
 addRoutes(app);

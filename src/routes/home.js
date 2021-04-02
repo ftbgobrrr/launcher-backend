@@ -25,7 +25,7 @@ router.get('/manifest', async (req, res) => {
         const packs = await req.db
             .collection('packs')
             .find({})
-            .map(({ preset, _id, name, data, libraries, files, desabled, mainClass, args, ...fields}) => ({ id: name, ...fields, type: 'release' }))
+            .map(({ preset, _id, name, data, libraries, files, disabled, mainClass, args, ...fields}) => ({ id: name, ...fields, type: 'release' }))
             .toArray();
 
         const files = await req.db
@@ -63,7 +63,7 @@ router.post('/uploadLauncher', jwt.active(), jwt.require('level', '>=', groupToL
     const out = `${appRoot}/public/launcher/${type}${arch !== 'null' ? `-${arch}`: ''}${path.extname(file.name)}`;
     await fse.createFile(out);
     await file.mv(out);
-    const url = `${HOST}/public/launcher/${type}${arch !== 'null' ? `-${arch}`: ''}${path.extname(file.name)}`;
+    const url = `/public/launcher/${type}${arch !== 'null' ? `-${arch}`: ''}${path.extname(file.name)}`;
     const sha1 = await sha1File(out);
     const { ok } = await req.db
         .collection('launcher')
