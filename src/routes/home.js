@@ -33,10 +33,6 @@ router.get('/manifest', async (req, res) => {
             .find({})
             .map(({ _id, url, ...fields }) => ({ ...fields, url: HOST + url }))
             .toArray()
-            .map((file) => {
-                file.url = HOST + file.url
-                return file;
-            });
         const versions = packs.map(({ default: def, ...v }) => {
             return {
                 ...v,
