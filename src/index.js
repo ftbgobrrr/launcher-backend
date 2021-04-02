@@ -31,7 +31,7 @@ app.use(cors({
     optionsSuccessStatus: 200,
 }));
 app.use(cookieParser());
-app.use(jwt.init(AUTH_SECRET, { cookie: 'auth' }));
+app.use(jwt.init(AUTH_SECRET, { cookie: 'auth', cookieOptions: { sameSite: 'lax' } }));
 app.use(bodyParser.json());
 // app.use(bodyParser.urlencoded({ extended: true, limit: 500 * 1024 * 1024 }));
 app.use(fileUpload({ abortOnLimit: false, limitHandler: false, useTempFiles: true, tempFileDir : '/tmp/' }));
